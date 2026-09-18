@@ -24,8 +24,7 @@ class Evaluator:
         all_targets = []
         
         with torch.no_grad():
-            for x, y in self.test_loader:
-                meta = torch.zeros(x.size(0), self.config['model']['num_station_metadata'])
+            for x, y, meta in self.test_loader:
                 x, y, meta = x.to(self.device), y.to(self.device), meta.to(self.device)
                 
                 outputs = self.model(x, meta)

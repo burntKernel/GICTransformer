@@ -66,7 +66,16 @@ export default function ForecastChart({ sim }) {
                   tick={{ fill: '#ffffff60', fontSize: 10, fontFamily: 'monospace' }}
                   tickFormatter={(val) => val.toFixed(1)}
                   width={60}
-                  domain={['auto', 'auto']}
+                  domain={[
+                     (dataMin) => {
+                        if (dataMin > 1000) return dataMin * 0.95; // 5% bottom margin for large baselines
+                        return dataMin < 0 ? dataMin * 1.5 : dataMin * 0.5;
+                     }, 
+                     (dataMax) => {
+                        if (dataMax > 1000) return dataMax * 1.05; // 5% top margin for large baselines
+                        return dataMax > 0 ? dataMax * 1.1 : dataMax * 0.9;
+                     }
+                  ]}
                />
                <Tooltip content={<CustomTooltip />} />
                <Legend 

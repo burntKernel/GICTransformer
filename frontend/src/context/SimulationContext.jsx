@@ -25,6 +25,7 @@ function reducer(state, action) {
         currentStep: 0,
         simulationData: [],
         initialized: true,
+        loading: false,
         error: null,
       };
     case 'ADD_STEP':

@@ -26,7 +26,7 @@ export default function SimControls({ sim }) {
         {/* Play / Pause */}
         <button
           onClick={isPlaying ? sim.pause : sim.start}
-          disabled={disableControls && !sim.initialized}
+          disabled={!connected || loading}
           className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-[11px] font-bold tracking-wider uppercase transition-all min-w-[120px] ${
             isPlaying
               ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 border border-yellow-500/50'
@@ -51,7 +51,7 @@ export default function SimControls({ sim }) {
         {/* Reset */}
         <button
           onClick={sim.reset}
-          disabled={disableControls && !sim.initialized}
+          disabled={!sim.initialized || loading}
           className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-[10px] font-bold tracking-wider uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Reset Simulation"
         >

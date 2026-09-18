@@ -3,6 +3,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+import xml.etree.ElementTree as ET
+
 class GICDataset(Dataset):
     def __init__(self, csv_path, history_len=120, pred_lead=30, stride=15, 
                  train=True, train_split=0.8, scaler=None):
@@ -14,6 +16,8 @@ class GICDataset(Dataset):
         
         # We will predict YKCX, YKCY, YKCZ
         self.target_cols = ['YKCX', 'YKCY', 'YKCZ']
+        # RESTORE the ground magnetic fields into the input features!
+        # We prevent persistence forecasting by predicting the RESIDUAL instead.
         self.feature_cols = [c for c in df.columns]
         
         # Split train/val chronologically
@@ -53,6 +57,35 @@ class GICDataset(Dataset):
             self.indices.append(i)
             
         self.input_dim = len(self.feature_cols)
+        self.station = "YKC"
+
+        # Load MT Metadata
+        self.metadata_tensor = self.load_mt_metadata(self.station)
+
+    def load_mt_metadata(self, station):
+        import os
+        mt_file = f"data/raw/mt/{station}_mt.xml"
+        if not os.path.exists(mt_file):
+            mt_file = f"../data/raw/mt/{station}_mt.xml" 
+        
+        meta_vals = []
+        try:
+            tree = ET.parse(mt_file)
+            root = tree.getroot()
+            for period in root.iter('Period'):
+                z = period.find('Z')
+                if z is not None:
+                    for val in z.findall('value'):
+                        parts = val.text.strip().split()
+                        meta_vals.extend([float(parts[0]), float(parts[1])])
+        except Exception as e:
+            meta_vals = [0.0] * 8
+            
+        meta_vals = meta_vals[:8]
+        if len(meta_vals) < 8:
+            meta_vals.extend([0.0] * (8 - len(meta_vals)))
+            
+        return torch.tensor(meta_vals, dtype=torch.float32)
 
     def __len__(self):
         return len(self.indices)
@@ -63,9 +96,14 @@ class GICDataset(Dataset):
         pred_idx = hist_end + self.pred_lead - 1 # Target at exact pred_lead horizon
         
         x = self.features[start_idx:hist_end]
-        y = self.targets[pred_idx]
         
-        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
+        y_present = self.targets[hist_end - 1]
+        y_future = self.targets[pred_idx]
+        
+        # PREDICT THE RESIDUAL (CHANGE) INSTEAD OF ABSOLUTE
+        y_residual = y_future - y_present
+        
+        return torch.tensor(x, dtype=torch.float32), torch.tensor(y_residual, dtype=torch.float32), self.metadata_tensor
         
     def get_scaler(self):
         return (self.feature_mean, self.feature_std, self.target_mean, self.target_std)

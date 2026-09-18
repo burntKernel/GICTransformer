@@ -55,13 +55,13 @@ export function useSimulation() {
     }
   }, [state.totalSteps, dispatch]);
 
-  // Start simulation & fetch first step
+  // Start simulation
   const start = useCallback(async () => {
     const total = await init();
     if (total > 0) {
-      await fetchStep(0);
+      dispatch({ type: 'SET_PLAYING', value: true });
     }
-  }, [init, fetchStep]);
+  }, [init, dispatch]);
 
   // Next single step
   const nextStep = useCallback(async () => {

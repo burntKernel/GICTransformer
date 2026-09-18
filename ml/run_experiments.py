@@ -40,7 +40,7 @@ def main():
         from torch.utils.data import DataLoader
         import torch
 
-        csv_path = os.path.join(config['data']['processed_dir'], 'gic_dataset_2015.csv')
+        csv_path = os.path.join(config['data']['processed_dir'], 'gic_dataset_2015_advanced.csv')
         hist_len = config['windowing']['history_len_mins']
         pred_lead = config['windowing']['pred_lead_mins']
         stride = config['windowing']['stride']
@@ -80,7 +80,7 @@ def main():
         from torch.utils.data import DataLoader
         import torch
 
-        csv_path = os.path.join(config['data']['processed_dir'], 'gic_dataset_2015.csv')
+        csv_path = os.path.join(config['data']['processed_dir'], 'gic_dataset_2015_advanced.csv')
         hist_len = config['windowing']['history_len_mins']
         pred_lead = config['windowing']['pred_lead_mins']
         stride = config['windowing']['stride']

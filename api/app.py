@@ -49,9 +49,9 @@ def init_app():
 
     # Check processed CSV path
     proc_dir = config['data']['processed_dir']
-    csv_path = os.path.join(base_dir, proc_dir, 'gic_dataset_2015.csv')
-    if not os.path.exists(csv_path):
-        csv_path = os.path.join(base_dir, 'ml', proc_dir, 'gic_dataset_2015.csv')
+    # config['data']['processed_dir'] is now '../data/processed' relative to ml/ 
+    # we can just use the absolute path since we know it's in the root
+    csv_path = os.path.join(base_dir, 'data', 'processed', 'gic_dataset_2015_advanced.csv')
 
     print(f"Config loaded from: {config_path}")
     print(f"Dataset path: {csv_path}")
@@ -126,7 +126,7 @@ def get_step(step):
         return jsonify({"error": "Step out of bounds"}), 400
         
     idx = storm_indices[step]
-    x, y_true_scaled = val_dataset[idx]
+    x, y_true_scaled, meta = val_dataset[idx]
     
     start_idx = val_dataset.indices[idx]
     pred_idx = start_idx + hist_len + pred_lead - 1
@@ -135,20 +135,40 @@ def get_step(step):
 
     with torch.no_grad():
         x_batch = x.unsqueeze(0).to(device)
-        meta = torch.zeros(1, config['model']['num_station_metadata']).to(device)
-        outputs = model(x_batch, meta)
+        meta_batch = meta.unsqueeze(0).to(device)
+        outputs = model(x_batch, meta_batch)
         preds = outputs[0] if isinstance(outputs, tuple) else outputs
-        pred_scaled = preds[0].cpu().numpy()
+        pred_residual_scaled = preds[0].cpu().numpy()
         
-    y_true_scaled = y_true_scaled.numpy()
+    # Reconstruct absolute predictions from the residual
+    y_present_scaled = val_dataset.targets[start_idx + hist_len - 1]
+    y_true_scaled = val_dataset.targets[pred_idx]
     
+    pred_scaled = y_present_scaled + pred_residual_scaled
+    
+    # Unscale predictions
     pred_unscaled = (pred_scaled * target_std) + target_mean
     y_true_unscaled = (y_true_scaled * target_std) + target_mean
 
+    # Apply 1e-3 conversion factor to map nT magnetic field targets to V/km geoelectric field approximations
+    true_x = float(y_true_unscaled[0]) * 1e-3
+    pred_x = float(pred_unscaled[0]) * 1e-3
+    true_y = float(y_true_unscaled[1]) * 1e-3
+    pred_y = float(pred_unscaled[1]) * 1e-3
+    
+    # Calculate Magnitude (Emag = sqrt(x^2 + y^2))
+    import math
+    true_emag = math.sqrt(true_x**2 + true_y**2)
+    pred_emag = math.sqrt(pred_x**2 + pred_y**2)
+
     return jsonify({
         "timestamp": dt.strftime('%H:%M'),
-        "true_ykcx": float(y_true_unscaled[0]),
-        "pred_ykcx": float(pred_unscaled[0])
+        "true_ex": true_x,
+        "pred_ex": pred_x,
+        "true_ey": true_y,
+        "pred_ey": pred_y,
+        "true_emag": true_emag,
+        "pred_emag": pred_emag
     })
 
 if __name__ == '__main__':

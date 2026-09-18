@@ -3,9 +3,13 @@ project:
   seed: 42
 
 data:
-  omni_dir: "data/raw/omni"
-  supermag_dir: "data/raw/supermag"
-  processed_dir: "data/processed"
+  omni_dir: "../data/raw/omni"
+  supermag_dir: "../data/raw/supermag"
+  processed_dir: "../data/processed"
+  mt_dir: "../data/raw/mt"
+  goes_dir: "../data/raw/goes"
+  ae_dir: "../data/raw/ae"
+  dscovr_dir: "../data/raw/dscovr"
   start_year: 2015
   end_year: 2024
   # Use a smaller range for testing if needed
@@ -24,7 +28,7 @@ model:
   num_encoder_layers: 3
   dim_feedforward: 256
   dropout: 0.1
-  num_station_metadata: 2  # lat, lon
+  num_station_metadata: 8  # Extracted MT Z-tensor values
   
 training:
   batch_size: 256

@@ -19,7 +19,13 @@ class Trainer:
         self.config = config
         self.device = device
         
-        self.criterion = nn.MSELoss()
+        def custom_loss(preds, targets):
+            mse = nn.MSELoss()(preds, targets)
+            # Penalize under-predicting the magnitude of the residual to prevent Mean-Reversion / Persistence Lag
+            mag_penalty = torch.mean(torch.relu(torch.abs(targets) - torch.abs(preds))) * 2.0
+            return mse + mag_penalty
+            
+        self.criterion = custom_loss
         self.optimizer = AdamW(self.model.parameters(), 
                                lr=self.config['training']['learning_rate'],
                                weight_decay=self.config['training']['weight_decay'])
@@ -27,14 +33,13 @@ class Trainer:
     def train_epoch(self):
         self.model.train()
         total_loss = 0
-        for x, y in tqdm(self.train_loader, desc="Training"):
-            # Assume dummy meta for now, in reality this comes from dataset
-            meta = torch.zeros(x.size(0), self.config['model']['num_station_metadata'])
+        for x, y, meta in tqdm(self.train_loader, desc="Training"):
             x, y, meta = x.to(self.device), y.to(self.device), meta.to(self.device)
             
             self.optimizer.zero_grad()
             outputs = self.model(x, meta)
             preds = outputs[0] if isinstance(outputs, tuple) else outputs
+            
             loss = self.criterion(preds, y)
             loss.backward()
             self.optimizer.step()
@@ -46,12 +51,12 @@ class Trainer:
         self.model.eval()
         total_loss = 0
         with torch.no_grad():
-            for x, y in self.val_loader:
-                meta = torch.zeros(x.size(0), self.config['model']['num_station_metadata'])
+            for x, y, meta in self.val_loader:
                 x, y, meta = x.to(self.device), y.to(self.device), meta.to(self.device)
                 
                 outputs = self.model(x, meta)
                 preds = outputs[0] if isinstance(outputs, tuple) else outputs
+                
                 loss = self.criterion(preds, y)
                 total_loss += loss.item()
         return total_loss / len(self.val_loader)
