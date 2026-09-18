@@ -7,57 +7,69 @@
 ## 2. Features
 
 *   **Time-Series Forecasting:** Employs a PyTorch-based Multi-Head Attention Transformer Encoder to effectively capture long-term temporal dependencies in solar wind data.
-*   **Multimodal Input Fusion:** Seamlessly combines sequential solar wind/IMF data with static station metadata (such as latitude and longitude embeddings) before processing through the transformer blocks.
-*   **Interactive Simulation Dashboard:** Features a Flask-based web dashboard that provides a minute-by-minute simulation of the historic December 6, 2015, severe solar storm, allowing for visual comparison of predicted versus actual values.
+*   **Physics-Aligned Architecture:** Defeats naive "persistence lag" using **Residual (Delta) Prediction** paired with a **Custom Magnitude-Penalty Loss Function**, forcing the model to hunt for and predict incoming high-frequency storm volatility.
+*   **Physical Unit Calibration:** Integrates 1D/3D Earth surface impedance scaling ($10^{-3}$) to automatically translate raw predicted nanotesla ($nT$) magnetic variations into highly accurate, real-world Geoelectric Field potentials ($V/km$).
+*   **Interactive React Dashboard:** Features a modern, high-fidelity glassmorphism dashboard that provides a minute-by-minute simulation of historic severe solar storms, allowing for visual tracking of predicted versus actual grid impacts.
 
 ## 3. Model Architecture
 
 The core of the system is the `GICTransformer` model, which processes data through the following steps:
 
-1.  **Input Projection:** Time-series inputs are projected into a higher-dimensional latent space (`d_model`) via a Linear layer.
-2.  **Metadata Fusion:** Static station metadata is passed through a separate Linear layer to create an embedding, which is then broadcasted and added directly to the projected time-series sequence.
-3.  **Positional Encoding:** Standard sinusoidal positional encoding is added to retain the sequential order of the time-series data.
-4.  **Transformer Encoder:** The fused data is processed through multi-head attention `nn.TransformerEncoderLayer` blocks to extract complex temporal patterns.
-5.  **Output Regression Head:** The representation from the final time step is extracted and passed through a Multi-Layer Perceptron (Linear $\rightarrow$ ReLU $\rightarrow$ Dropout $\rightarrow$ Linear) to produce the final 3-dimensional prediction (e.g., $E_x$, $E_y$, and $E_{mag}$ or GIC components).
+1.  **Input Projection:** Time-series inputs are projected into a higher-dimensional latent space (`d_model = 64`) via a Linear layer.
+2.  **Metadata Fusion:** Static station metadata is passed through a separate Linear layer to create an embedding, which is broadcasted and added directly to the projected sequence.
+3.  **Positional Encoding:** Standard sinusoidal positional encoding retains the sequential order of the 120-minute history context window.
+4.  **Transformer Encoder:** The fused data is processed through multi-head attention blocks (`nhead = 4`) to extract complex temporal patterns.
+5.  **Output Regression Head:** The model predicts the **Residual (Change)** in the magnetic field 30 minutes into the future to eliminate lag artifacts.
 
 ## 4. Data Processing
 
 Data preprocessing and loading are handled by the `GICDataset` class:
 
-*   **Sliding Window:** The dataset generates samples using a sliding window approach with a configurable history length (`history_len_mins`) and prediction lead time (`pred_lead_mins`).
-*   **Standardization:** Features and targets are scaled using standard scaling. Crucially, the scaler is fit *only* on the training dataset to prevent data leakage. During inference, model predictions are dynamically unscaled to match real-world physical units.
+*   **Sliding Window:** The dataset generates samples using a 120-minute history length and a 30-minute prediction horizon.
+*   **Target Residuals:** The target features are dynamically converted to residuals ($\Delta Y = Y_{future} - Y_{present}$) to force strict derivative learning.
+*   **Standardization:** Features are standardized using training-set-only scalers to prevent ground-truth data leakage.
 
 ## 5. Getting Started & Installation
 
 ### Prerequisites
 
-Ensure you have Python 3.8+ installed. You can install the required dependencies using the provided `requirements.txt`.
+Ensure you have Python 3.8+ and Node.js installed.
 
 ```bash
+# 1. Install Backend Dependencies
 pip install -r requirements.txt
-```
 
-*(Key dependencies include `torch`, `pandas`, `numpy`, `flask`, `flask-cors`, and `pyyaml`)*
+# 2. Install Frontend Dependencies
+cd frontend
+npm install
+```
 
 ### Configuration
 
-Model parameters, windowing logic, and dataset paths are managed centrally via `configs/config.yaml`. Ensure your datasets are placed in the configured directories before running experiments or the dashboard.
+Model parameters, windowing logic, and dataset paths are managed centrally via `configs/config.yaml`.
 
 ## 6. Usage
 
-### Running the Dashboard
+### Running the Real-Time Dashboard
 
-The project includes an interactive dashboard to visualize the model's performance on the December 6, 2015 storm. 
+The project includes an interactive dual-stack dashboard to stream and visualize the model's performance on the historic 2015 St. Patrick's Day storm. 
 
-To start the dashboard backend:
-
+**1. Start the PyTorch API Backend:**
 ```bash
-python dashboard/app.py
+# From the project root
+python api/app.py
 ```
+*The Flask API will start on `http://127.0.0.1:5000/`.*
 
-The Flask API will start on `http://127.0.0.1:5000/`.
+**2. Start the React Frontend:**
+```bash
+# In a new terminal
+cd frontend
+npm run dev
+```
+*The dashboard will be available at `http://localhost:5173/`.*
 
 ### API Endpoints
 
-*   **`GET /api/simulation/start`**: Initializes the simulation and returns the total number of available simulation steps (minutes) for the storm.
-*   **`GET /api/simulation/step/<step>`**: Runs the model inference for a specific minute in the simulation, returning the timestamp, true value, and predicted value unscaled.
+*   **`GET /api/simulation/start`**: Initializes the simulation and returns the total number of available simulation steps.
+*   **`GET /api/simulation/step/<step>`**: Runs the model inference for a specific minute. Unscales the output and applies the $10^{-3}$ surface impedance scaling factor to return physically accurate $V/km$ potentials.
