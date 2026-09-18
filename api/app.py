@@ -35,17 +35,36 @@ def init_app():
 
     print("Initializing Backend...")
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    # Check root configs/config.yaml or ml/configs/config.yaml
     config_path = os.path.join(base_dir, 'configs', 'config.yaml')
+    if not os.path.exists(config_path):
+        config_path = os.path.join(base_dir, 'ml', 'configs', 'config.yaml')
+
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Configuration file not found at '{config_path}'")
+
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    csv_path = os.path.join(base_dir, config['data']['processed_dir'], 'gic_dataset_2015.csv')
+    # Check processed CSV path
+    proc_dir = config['data']['processed_dir']
+    csv_path = os.path.join(base_dir, proc_dir, 'gic_dataset_2015.csv')
+    if not os.path.exists(csv_path):
+        csv_path = os.path.join(base_dir, 'ml', proc_dir, 'gic_dataset_2015.csv')
+
+    print(f"Config loaded from: {config_path}")
+    print(f"Dataset path: {csv_path}")
+
+    if not os.path.exists(csv_path):
+        print(f"WARNING: Dataset CSV not found at '{csv_path}'. Run data generation script to produce gic_dataset_2015.csv.")
+        return
+
     hist_len = config['windowing']['history_len_mins']
     pred_lead = config['windowing']['pred_lead_mins']
     
     print("Loading datasets...")
     train_dataset = GICDataset(csv_path, history_len=hist_len, pred_lead=pred_lead, stride=config['windowing']['stride'], train=True)
-    # Set stride=1 for continuous minute-by-minute live simulation
     val_dataset = GICDataset(csv_path, history_len=hist_len, pred_lead=pred_lead, stride=1, train=False, scaler=train_dataset.get_scaler())
     
     _, _, target_mean, target_std = train_dataset.get_scaler()
@@ -63,7 +82,15 @@ def init_app():
     ).to(device)
 
     model_path = os.path.join(base_dir, 'checkpoints', 'best_model.pth')
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    if not os.path.exists(model_path):
+        model_path = os.path.join(base_dir, 'ml', 'checkpoints', 'best_model.pth')
+
+    if os.path.exists(model_path):
+        print(f"Loading checkpoint from: {model_path}")
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    else:
+        print(f"NOTICE: Checkpoint not found at '{model_path}'. Running with initialized model weights.")
+
     model.eval()
 
     df_full = pd.read_csv(csv_path, index_col=0, parse_dates=True)

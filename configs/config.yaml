@@ -1,0 +1,36 @@
+project:
+  name: "gic_transformer"
+  seed: 42
+
+data:
+  omni_dir: "data/raw/omni"
+  supermag_dir: "data/raw/supermag"
+  processed_dir: "data/processed"
+  start_year: 2015
+  end_year: 2024
+
+windowing:
+  history_len_mins: 120    # 2 hours lookback
+  pred_lead_mins: 30       # 30 min forecast horizon (can also be 60)
+  stride: 15               # Sliding window stride
+
+model:
+  type: "transformer" # or 'lstm', 'rf'
+  d_model: 64
+  nhead: 4
+  num_encoder_layers: 3
+  dim_feedforward: 256
+  dropout: 0.1
+  num_station_metadata: 2  # lat, lon
+  
+training:
+  batch_size: 256
+  learning_rate: 1.0e-4
+  epochs: 50
+  patience: 10             # Early stopping patience
+  weight_decay: 1.0e-5
+
+evaluation:
+  test_stations: ["SIT", "BOU", "FRD"] # Example Leave-Station-Out test set
+  storm_threshold_dst: -50             # For event-based metrics
+  gic_risk_threshold_e: 1.0            # V/km
