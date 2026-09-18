@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #040610;
+  color: #cbd5e1;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #060a14; }
+::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.35); }
+
+/* ===== Background Grid ===== */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.025) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* ===== Glassmorphism ===== */
+.glass {
+  background: rgba(10, 15, 30, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.08);
+}
+
+.glass-strong {
+  background: rgba(10, 15, 30, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 240, 255, 0.12);
+}
+
+/* ===== Glow Effects ===== */
+.glow-border {
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.08), inset 0 0 12px rgba(0, 240, 255, 0.03);
+}
+
+.glow-text {
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.4), 0 0 40px rgba(0, 240, 255, 0.15);
+}
+
+/* ===== Animated Gradient Text ===== */
+.gradient-text {
+  background: linear-gradient(135deg, #00f0ff 0%, #0080ff 40%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Status Indicators ===== */
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+  50% { box-shadow: 0 0 8px 3px currentColor; }
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* ===== Scanline Effect ===== */
+@keyframes scan { 0% { top: -4px; } 100% { top: 100%; } }
+.scanline::after {
+  content: '';
+  position: absolute; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.08), transparent);
+  animation: scan 4s linear infinite;
+  pointer-events: none;
+}
+
+/* ===== Data flow animation ===== */
+@keyframes data-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.data-flow-line {
+  background: linear-gradient(90deg, transparent 0%, rgba(0,240,255,0.6) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: data-flow 2s linear infinite;
+}
+
+/* ===== Loading bar ===== */
+@keyframes loading-bar {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+/* ===== Canvas container ===== */
+.earth-canvas { width: 100%; height: 100%; min-height: 500px; }
+
+/* chart container for recharts */
+.recharts-responsive-container { font-family: 'Inter', sans-serif !important; }
+.recharts-tooltip-wrapper { pointer-events: none !important; }
